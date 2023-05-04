@@ -15,15 +15,15 @@ program
 const options = program.opts();
 async function load(filepath) {
     try {
-        // check cache
-        const outputDir = path.join(path.dirname(filepath), `${path.basename(filepath)}-chunks`);
-        console.log(outputDir);
-        // check if outputDir exists
-        if (fs.existsSync(outputDir)) {
-            console.log("...using cached chunks via: ", outputDir);
-            const cachedChunks = fs.readdirSync(outputDir);
-            console.log(outputDir);
-            return;
+        const outputFilePath = path.join(path.dirname(process.cwd()), `${path.basename(filepath)}-chunks.json`);
+        // caching layer - check if outputDir exists from previous run
+        let chunks = [];
+        if (fs.existsSync(outputFilePath)) {
+            console.log("...using cached chunks via: ", outputFilePath);
+            const cachedFile = fs.readFileSync(outputFilePath);
+            // convert file to string
+            chunks = JSON.parse(cachedFile.toString());
+            return chunks;
         }
         // load document since no cache exists
         const docs = await new PDFLoader(filepath).load();
@@ -31,10 +31,9 @@ async function load(filepath) {
             chunkSize: 4000,
             chunkOverlap: 200,
         });
-        const chuncks = await splitter.splitDocuments(docs);
-        console.log(chuncks);
-        // write chunks to outputDir for cache
-        fs.mkdirSync(outputDir);
+        chunks = await splitter.splitDocuments(docs);
+        fs.writeFileSync(outputFilePath, JSON.stringify(chunks));
+        return chunks;
     }
     catch (error) {
         console.error("Error occurred while reading the directory!", error);
@@ -42,7 +41,8 @@ async function load(filepath) {
 }
 if (options.ls) {
     const filepath = typeof options.ls === "string" ? options.ls : __dirname;
-    load(filepath);
+    const chunks = await load(filepath);
+    console.log(chunks);
 }
 if (!process.argv.slice(2).length) {
     program.outputHelp();
