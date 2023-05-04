@@ -1,9 +1,11 @@
 #! /usr/bin/env node
 
-const {Command} = require("commander");
-const fs = require("fs");
-const path = require("path");
-const figlet = require("figlet");
+import {Command} from "commander";
+import fs from "fs";
+import path from "path";
+import figlet from "figlet";
+import {RecursiveCharacterTextSplitter} from "langchain/text_splitter";
+import { PDFLoader } from "langchain/document_loaders/fs/pdf";
 
 const program = new Command();
 
@@ -11,25 +13,21 @@ console.log(figlet.textSync("Dir Manager"));
 
 program
 	.version("1.0.0")
-	.description("An example CLI for managing a directory")
-	.option("-l, --ls  [value]", "List directory contents")
-	.option("-m, --mkdir <value>", "Create a directory")
-	.option("-t, --touch <value>", "Create a file")
+	.description("Simple CLI wrapper around Langchain/OpenAI APIs")
+	.option("-l, --ls  <filepath>", "Load a document from a file path")
 	.parse(process.argv);
 
 const options = program.opts();
 
-// change to load document call
-async function listDirContents(filepath: string) {
+async function load(filepath: string) {
 	try {
-		const files = await fs.promises.readdir(filepath);
-		const detailedFilesPromises = files.map(async (file: string) => {
-			let fileDetails = await fs.promises.lstat(path.resolve(filepath, file));
-			const {size, birthtime} = fileDetails;
-			return {filename: file, "size(KB)": size, created_at: birthtime};
+		const docs = await new PDFLoader(filepath).load();
+		const splitter = new RecursiveCharacterTextSplitter({
+			chunkSize: 4000,
+			chunkOverlap: 200,
 		});
-		const detailedFiles = await Promise.all(detailedFilesPromises);
-		console.table(detailedFiles);
+		const chuncks = await splitter.splitDocuments(docs);
+		console.log(chuncks);
 	} catch (error) {
 		console.error("Error occurred while reading the directory!", error);
 	}
@@ -49,7 +47,7 @@ function createFile(filepath: string) {
 
 if (options.ls) {
 	const filepath = typeof options.ls === "string" ? options.ls : __dirname;
-	listDirContents(filepath);
+	load(filepath);
 }
 if (options.mkdir) {
 	createDir(path.resolve(__dirname, options.mkdir));
