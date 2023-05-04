@@ -1,17 +1,17 @@
-name: "publish package to npm"
+#name: "publish package to npm"
 
-on: push
+#on: push
 
-jobs:
-  publish:
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout
-        uses: actions/checkout@v2
-      - name: node
-        uses: actions/setup-node@v2
-        with:
-          node-version: 18
-          registry-url: https://registry.npmjs.org
-      - name: publish
-        run: npm publish --access public
+#jobs:
+#  publish:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: checkout
+#        uses: actions/checkout@v2
+#      - name: node
+#        uses: actions/setup-node@v2
+#        with:
+#          node-version: 18
+#          registry-url: https://registry.npmjs.org
+#      - name: publish
+#        run: npm publish --access public
