@@ -20,7 +20,7 @@ program
 
 const options = program.opts();
 
-async function load(filepath: string) {
+async function load(filepath: string): Promise<Document<Record<string, any>>[] | undefined> {
 	try {
 		const outputFilePath = path.join(path.dirname(process.cwd()), `${path.basename(filepath)}-chunks.json`);
 		// caching layer - check if outputDir exists from previous run
@@ -50,7 +50,7 @@ async function load(filepath: string) {
 
 if (options.ls) {
 	const filepath = typeof options.ls === "string" ? options.ls : __dirname;
-	const chunks = load(filepath);
+	const chunks = await load(filepath);
 	console.log(chunks);
 }
 
