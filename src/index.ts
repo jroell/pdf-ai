@@ -5,8 +5,13 @@ import fs from "fs";
 import path from "path";
 import figlet from "figlet";
 import {RecursiveCharacterTextSplitter} from "langchain/text_splitter";
-import { PDFLoader } from "langchain/document_loaders/fs/pdf";
+import {PDFLoader} from "langchain/document_loaders/fs/pdf";
 import {Document} from "langchain/dist/document";
+import {SupabaseVectorStore} from "langchain/vectorstores/supabase";
+import {OpenAIEmbeddings} from "langchain/embeddings/openai";
+import {createClient} from "@supabase/supabase-js";
+
+let storeClient: any;
 
 const program = new Command();
 
@@ -19,6 +24,7 @@ program
 	.parse(process.argv);
 
 const options = program.opts();
+
 
 async function load(filepath: string): Promise<Document<Record<string, any>>[] | undefined> {
 	try {
@@ -48,12 +54,40 @@ async function load(filepath: string): Promise<Document<Record<string, any>>[] |
 	}
 }
 
+async function getStore(chunks: Document<Record<string, any>>[], searchTerm: string, k: number = 1) {
+	const privateKey = process.env.SUPABASE_PRIVATE_KEY;
+	if (!privateKey) throw new Error(`Expected env var SUPABASE_PRIVATE_KEY`);
+
+	const url = process.env.SUPABASE_URL;
+	if (!url) throw new Error(`Expected env var SUPABASE_URL`);
+
+	const client = createClient(url, privateKey);
+	const vectorStore = await SupabaseVectorStore.fromDocuments(
+		chunks,
+		new OpenAIEmbeddings(),
+		{
+			client,
+			tableName: "documents",
+			queryName: "match_documents",
+		}
+	);
+
+	const relevantChunk = await vectorStore.similaritySearch(searchTerm, k);
+	console.log(relevantChunk);
+}
+
 if (options.ls) {
-	const filepath = typeof options.ls === "string" ? options.ls : __dirname;
-	const chunks = await load(filepath);
-	console.log(chunks);
+	try {
+		const filepath = typeof options.ls === "string" ? options.ls : __dirname;
+		const chunks = await load(filepath);
+		if (!chunks) throw new Error(`Expected chunks to be defined`);
+		getStore(chunks, "what is a custom property?");
+
+	} catch (error) {
+		console.log("Something bad happened :( .... ->", error);
+	}
 }
 
 if (!process.argv.slice(2).length) {
-  program.outputHelp();
+	program.outputHelp();
 }

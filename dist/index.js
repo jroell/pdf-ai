@@ -5,6 +5,10 @@ import path from "path";
 import figlet from "figlet";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { PDFLoader } from "langchain/document_loaders/fs/pdf";
+import { SupabaseVectorStore } from "langchain/vectorstores/supabase";
+import { OpenAIEmbeddings } from "langchain/embeddings/openai";
+import { createClient } from "@supabase/supabase-js";
+let storeClient;
 const program = new Command();
 console.log(figlet.textSync("PDF-AI-CLI"));
 program
@@ -39,10 +43,33 @@ async function load(filepath) {
         console.error("Error occurred while reading the directory!", error);
     }
 }
+async function getStore(chunks, searchTerm, k = 1) {
+    const privateKey = process.env.SUPABASE_PRIVATE_KEY;
+    if (!privateKey)
+        throw new Error(`Expected env var SUPABASE_PRIVATE_KEY`);
+    const url = process.env.SUPABASE_URL;
+    if (!url)
+        throw new Error(`Expected env var SUPABASE_URL`);
+    const client = createClient(url, privateKey);
+    const vectorStore = await SupabaseVectorStore.fromDocuments(chunks, new OpenAIEmbeddings(), {
+        client,
+        tableName: "documents",
+        queryName: "match_documents",
+    });
+    const resultOne = await vectorStore.similaritySearch(searchTerm, k);
+    console.log(resultOne);
+}
 if (options.ls) {
-    const filepath = typeof options.ls === "string" ? options.ls : __dirname;
-    const chunks = await load(filepath);
-    console.log(chunks);
+    try {
+        const filepath = typeof options.ls === "string" ? options.ls : __dirname;
+        const chunks = await load(filepath);
+        if (!chunks)
+            throw new Error(`Expected chunks to be defined`);
+        getStore(chunks, "what is a custom property?");
+    }
+    catch (error) {
+        console.log("Something bad happened :( .... ->", error);
+    }
 }
 if (!process.argv.slice(2).length) {
     program.outputHelp();
