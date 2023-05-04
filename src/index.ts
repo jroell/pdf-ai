@@ -9,7 +9,7 @@ import { PDFLoader } from "langchain/document_loaders/fs/pdf";
 
 const program = new Command();
 
-console.log(figlet.textSync("Dir Manager"));
+console.log(figlet.textSync("PDF-AI-CLI"));
 
 program
 	.version("1.0.0")
@@ -33,27 +33,9 @@ async function load(filepath: string) {
 	}
 }
 
-function createDir(filepath: string) {
-	if (!fs.existsSync(filepath)) {
-		fs.mkdirSync(filepath);
-		console.log("The directory has been created successfully");
-	}
-}
-
-function createFile(filepath: string) {
-	fs.openSync(filepath, "w");
-	console.log("An empty file has been created");
-}
-
 if (options.ls) {
 	const filepath = typeof options.ls === "string" ? options.ls : __dirname;
 	load(filepath);
-}
-if (options.mkdir) {
-	createDir(path.resolve(__dirname, options.mkdir));
-}
-if (options.touch) {
-	createFile(path.resolve(__dirname, options.touch));
 }
 
 if (!process.argv.slice(2).length) {
